@@ -44,8 +44,6 @@ export class LoginComponent implements OnInit {
 
     this.userService.login( formData, formData.rememberMe )
         .subscribe( res => {
-          console.log('Iniciaste Sesión.');
-          console.log(res);
           this.router.navigateByUrl('/');
         }, (err) => {
           Swal.fire('Error', err.error.msg, 'error');

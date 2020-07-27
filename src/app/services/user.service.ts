@@ -9,6 +9,8 @@ import { environment } from './../../environments/environment';
 import { RegisterForm } from '../interfaces/register-form.interface';
 import { LoginForm } from '../interfaces/login-form.interface';
 
+import { User } from '../models/user.model';
+
 const base_url = environment.base_url;
 
 @Injectable({
@@ -16,8 +18,18 @@ const base_url = environment.base_url;
 })
 export class UserService {
 
+  public user: User;
+
   constructor( private http: HttpClient,
                private router: Router ) { }
+
+  get token(): string {
+    return localStorage.getItem('token') || '';
+  }
+
+  get uid(): string {
+    return this.user.uid || '';
+  }
 
   logout() {
     localStorage.removeItem('token');
@@ -25,17 +37,19 @@ export class UserService {
   }
 
   validateToken(): Observable<boolean> {
-    const token = localStorage.getItem('token') || '';
 
     return this.http.get(`${ base_url }/login/renew`, {
       headers: {
-        'x-token': token
+        'x-token': this.token
       }
     }).pipe(
-      tap((res: any) => {
+      map((res: any) => {
+        const { email, google, img = '', name, role, uid } = res.user;
+        this.user = new User(name, email, '', img, google, role, uid);
+
         localStorage.setItem('token', res.token);
+        return true;
       }),
-      map( res => true ),
       catchError( err => of(false) )
     );
 
@@ -67,5 +81,13 @@ export class UserService {
                   })
                 );
 
+  }
+
+  updateUser( formData: { name: string, email: string } ) {
+    return this.http.put(`${base_url}/users/${ this.uid }`, formData, {
+      headers: {
+        'x-token': this.token
+      }
+    });
   }
 }
