@@ -8,6 +8,7 @@ import { environment } from './../../environments/environment';
 
 import { RegisterForm } from '../interfaces/register-form.interface';
 import { LoginForm } from '../interfaces/login-form.interface';
+import { GetUsers } from '../interfaces/get-users.interface';
 
 import { User } from '../models/user.model';
 
@@ -31,6 +32,14 @@ export class UserService {
     return this.user.uid || '';
   }
 
+  get headers() {
+    return {
+      headers: {
+        'x-token': this.token
+      }
+    };
+  }
+
   logout() {
     localStorage.removeItem('token');
     this.router.navigateByUrl('/login');
@@ -38,11 +47,8 @@ export class UserService {
 
   validateToken(): Observable<boolean> {
 
-    return this.http.get(`${ base_url }/login/renew`, {
-      headers: {
-        'x-token': this.token
-      }
-    }).pipe(
+    return this.http.get(`${ base_url }/login/renew`, this.headers)
+    .pipe(
       map((res: any) => {
         const { email, google, img = '', name, role, uid } = res.user;
         this.user = new User(name, email, '', img, google, role, uid);
@@ -84,10 +90,37 @@ export class UserService {
   }
 
   updateUser( formData: { name: string, email: string } ) {
-    return this.http.put(`${base_url}/users/${ this.uid }`, formData, {
-      headers: {
-        'x-token': this.token
-      }
-    });
+    return this.http.put(`${base_url}/users/${ this.uid }`, formData, this.headers);
   }
+
+  getUsers( from: number =  0, items: number = 10 ) {
+
+    const url = `${base_url}/users?from=${ from }&items=${ items }`;
+    return this.http.get<GetUsers>( url, this.headers)
+              .pipe(
+                map( res => {
+                  const users = res.users.map(
+                    user => new User(user.name, user.email, '', user.img, user.google, user.role, user.uid)
+                  );
+
+                  return {
+                    total: res.total,
+                    users
+                  };
+                })
+              );
+
+  }
+
+  deleteUser( user: User ){
+
+    const url = `${ base_url }/users/${ user.uid }`;
+    return this.http.delete( url, this.headers );
+
+  }
+
+  updateUserInfo(formData: User) {
+    return this.http.put(`${base_url}/users/${formData.uid}`, formData, this.headers);
+  }
+
 }
